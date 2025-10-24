@@ -1,0 +1,224 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+
+typedef struct FibNode {
+    int key;
+    int degree;
+    struct FibNode *left, *right, *child, *parent;
+    int mark;
+} FibNode;
+
+FibNode* createNode(int key) {
+    FibNode* n = (FibNode*)malloc(sizeof(FibNode));
+    n->key = key;
+    n->degree = 0;
+    n->mark = 0;
+    n->left = n->right = n;
+    n->child = n->parent = NULL;
+    return n;
+}
+
+// Merge two circular doubly linked lists
+FibNode* mergeLists(FibNode* a, FibNode* b) {
+    if (!a) return b;
+    if (!b) return a;
+
+    FibNode* temp = a->right;
+    a->right = b->right;
+    a->right->left = a;
+    b->right = temp;
+    b->right->left = b;
+
+    return (a->key < b->key) ? a : b;
+}
+
+// Insert a new node
+FibNode* insert(FibNode* heap, int key) {
+    FibNode* node = createNode(key);
+    heap = mergeLists(heap, node);
+    return heap;
+}
+
+// Find minimum node
+FibNode* findMin(FibNode* heap) {
+    return heap;
+}
+
+// Find maximum node (traverse root list)
+int findMax(FibNode* heap) {
+    if (!heap) return -1;
+    FibNode* temp = heap;
+    int max = heap->key;
+    do {
+        if (temp->key > max)
+            max = temp->key;
+        temp = temp->right;
+    } while (temp != heap);
+    return max;
+}
+
+// Link two trees of same degree
+void linkTrees(FibNode* y, FibNode* x) {
+    // Remove y from root list
+    y->left->right = y->right;
+    y->right->left = y->left;
+
+    // Make y a child of x
+    y->parent = x;
+    if (!x->child) {
+        x->child = y;
+        y->left = y->right = y;
+    } else {
+        y->right = x->child->right;
+        y->left = x->child;
+        x->child->right->left = y;
+        x->child->right = y;
+    }
+    x->degree++;
+    y->mark = 0;
+}
+
+// Consolidate trees after extract-min
+FibNode* consolidate(FibNode* heap) {
+    if (!heap) return NULL;
+
+    int D = 50; // maximum degree we might need
+    FibNode* A[D];
+    for (int i = 0; i < D; i++) A[i] = NULL;
+
+    FibNode* start = heap;
+    FibNode* w = heap;
+    do {
+        FibNode* x = w;
+        int d = x->degree;
+        FibNode* next = w->right;
+
+        while (A[d]) {
+            FibNode* y = A[d];
+            if (x->key > y->key) {
+                FibNode* temp = x;
+                x = y;
+                y = temp;
+            }
+            linkTrees(y, x);
+            A[d] = NULL;
+            d++;
+        }
+        A[d] = x;
+        w = next;
+    } while (w != start);
+
+    heap = NULL;
+    for (int i = 0; i < D; i++) {
+        if (A[i]) {
+            A[i]->left = A[i]->right = A[i];
+            heap = mergeLists(heap, A[i]);
+        }
+    }
+    return heap;
+}
+
+// Extract minimum node
+FibNode* extractMin(FibNode* heap) {
+    if (!heap) {
+        printf("Heap is empty.\n");
+        return NULL;
+    }
+
+    FibNode* z = heap;
+
+    // Add children of z to root list
+    if (z->child) {
+        FibNode* c = z->child;
+        do {
+            c->parent = NULL;
+            c = c->right;
+        } while (c != z->child);
+        heap = mergeLists(heap, z->child);
+    }
+
+    // Remove z from root list
+    z->left->right = z->right;
+    z->right->left = z->left;
+
+    FibNode* next = (z == z->right) ? NULL : z->right;
+
+    free(z);
+    heap = consolidate(next);
+
+    printf("Extracted Min successfully.\n");
+    return heap;
+}
+
+// Display root list
+void display(FibNode* heap) {
+    if (!heap) {
+        printf("Heap is empty.\n");
+        return;
+    }
+
+    FibNode* temp = heap;
+    printf("Root list: ");
+    do {
+        printf("%d(deg:%d) ", temp->key, temp->degree);
+        temp = temp->right;
+    } while (temp != heap);
+    printf("\n");
+}
+
+// Main
+int main() {
+    FibNode* heap = NULL;
+    int choice, val;
+
+    while (1) {
+        printf("\n--- Fibonacci Heap Menu ---\n");
+        printf("1. Insert\n");
+        printf("2. Find Min\n");
+        printf("3. Find Max\n");
+        printf("4. Extract Min\n");
+        printf("5. Display\n");
+        printf("6. Exit\n");
+        printf("Enter choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                printf("Enter value: ");
+                scanf("%d", &val);
+                heap = insert(heap, val);
+                printf("Inserted %d\n", val);
+                break;
+
+            case 2:
+                if (heap)
+                    printf("Min: %d\n", heap->key);
+                else
+                    printf("Heap is empty.\n");
+                break;
+
+            case 3:
+                if (heap)
+                    printf("Max: %d\n", findMax(heap));
+                else
+                    printf("Heap is empty.\n");
+                break;
+
+            case 4:
+                heap = extractMin(heap);
+                break;
+
+            case 5:
+                display(heap);
+                break;
+
+            case 6:
+                printf("Exiting...\n");
+                return 0;
+
+            default:
+                printf("Invalid choice.\n");
+        }
+    }
+}
