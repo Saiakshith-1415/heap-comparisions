@@ -1,0 +1,154 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+
+typedef struct Node {
+    int key;
+    struct Node *left, *right;
+} Node;
+
+// Create a new node
+Node* newNode(int key) {
+    Node* n = (Node*)malloc(sizeof(Node));
+    n->key = key;
+    n->left = n->right = NULL;
+    return n;
+}
+
+// Merge two skew heaps
+Node* merge(Node* a, Node* b) {
+    if (!a) return b;
+    if (!b) return a;
+
+    // Ensure the smaller key becomes the root
+    if (a->key > b->key) {
+        Node* temp = a;
+        a = b;
+        b = temp;
+    }
+
+    // Recursively merge
+    a->right = merge(a->right, b);
+
+    // Swap children to maintain skew heap property
+    Node* temp = a->left;
+    a->left = a->right;
+    a->right = temp;
+
+    return a;
+}
+
+// Insert operation
+Node* insert(Node* root, int key) {
+    return merge(root, newNode(key));
+}
+
+// Delete min (remove root)
+Node* deleteMin(Node* root) {
+    if (!root) {
+        printf("Heap is empty!\n");
+        return NULL;
+    }
+    Node* newRoot = merge(root->left, root->right);
+    printf("Deleted Min: %d\n", root->key);
+    free(root);
+    return newRoot;
+}
+
+// Find minimum element (root)
+int findMin(Node* root) {
+    if (!root) return INT_MIN;
+    return root->key;
+}
+
+// Find maximum (traverse entire tree)
+int findMax(Node* root) {
+    if (!root) return INT_MIN;
+    int leftMax = findMax(root->left);
+    int rightMax = findMax(root->right);
+    int max = root->key;
+    if (leftMax > max) max = leftMax;
+    if (rightMax > max) max = rightMax;
+    return max;
+}
+
+// Display heap (Inorder traversal)
+void inorder(Node* root) {
+    if (!root) return;
+    inorder(root->left);
+    printf("%d ", root->key);
+    inorder(root->right);
+}
+
+int main() {
+    Node* heap = NULL;
+    int choice, val;
+    Node* anotherHeap = NULL;
+
+    while (1) {
+        printf("\n--- Skew Heap Menu ---\n");
+        printf("1. Insert\n");
+        printf("2. Find Min\n");
+        printf("3. Find Max\n");
+        printf("4. Delete Min\n");
+        printf("5. Merge Another Heap\n");
+        printf("6. Display (Inorder)\n");
+        printf("7. Exit\n");
+        printf("Enter choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                printf("Enter value: ");
+                scanf("%d", &val);
+                heap = insert(heap, val);
+                printf("Inserted %d\n", val);
+                break;
+
+            case 2:
+                if (heap)
+                    printf("Min Element: %d\n", findMin(heap));
+                else
+                    printf("Heap is empty!\n");
+                break;
+
+            case 3:
+                if (heap)
+                    printf("Max Element: %d\n", findMax(heap));
+                else
+                    printf("Heap is empty!\n");
+                break;
+
+            case 4:
+                heap = deleteMin(heap);
+                break;
+
+            case 5:
+                printf("Creating new heap to merge...\n");
+                printf("Enter number of elements in new heap: ");
+                int n; scanf("%d", &n);
+                anotherHeap = NULL;
+                for (int i = 0; i < n; i++) {
+                    printf("Enter value %d: ", i + 1);
+                    scanf("%d", &val);
+                    anotherHeap = insert(anotherHeap, val);
+                }
+                heap = merge(heap, anotherHeap);
+                printf("Heaps merged successfully!\n");
+                break;
+
+            case 6:
+                printf("Inorder traversal of heap: ");
+                inorder(heap);
+                printf("\n");
+                break;
+
+            case 7:
+                printf("Exiting...\n");
+                return 0;
+
+            default:
+                printf("Invalid choice. Try again.\n");
+        }
+    }
+}
