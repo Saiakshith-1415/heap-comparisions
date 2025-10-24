@@ -1,0 +1,234 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+
+typedef struct node {
+    int key, degree;
+    struct node *parent, *child, *sibling;
+} Node;
+
+// Create a new node
+Node* newNode(int key) {
+    Node* temp = (Node*)malloc(sizeof(Node));
+    temp->key = key;
+    temp->degree = 0;
+    temp->parent = temp->child = temp->sibling = NULL;
+    return temp;
+}
+
+// Merge two binomial trees of the same degree
+Node* mergeTrees(Node* b1, Node* b2) {
+    if (b1->key > b2->key) {
+        Node* tmp = b1;
+        b1 = b2;
+        b2 = tmp;
+    }
+    b2->parent = b1;
+    b2->sibling = b1->child;
+    b1->child = b2;
+    b1->degree++;
+    return b1;
+}
+
+// Merge two binomial heaps
+Node* mergeHeaps(Node* h1, Node* h2) {
+    if (!h1) return h2;
+    if (!h2) return h1;
+    Node* head;
+    Node* tail;
+    if (h1->degree <= h2->degree) {
+        head = h1;
+        h1 = h1->sibling;
+    } else {
+        head = h2;
+        h2 = h2->sibling;
+    }
+    tail = head;
+
+    while (h1 && h2) {
+        if (h1->degree <= h2->degree) {
+            tail->sibling = h1;
+            h1 = h1->sibling;
+        } else {
+            tail->sibling = h2;
+            h2 = h2->sibling;
+        }
+        tail = tail->sibling;
+    }
+    tail->sibling = (h1) ? h1 : h2;
+    return head;
+}
+
+// Union of two binomial heaps
+Node* unionHeaps(Node* h1, Node* h2) {
+    Node* newHeap = mergeHeaps(h1, h2);
+    if (!newHeap) return NULL;
+    Node *prev = NULL, *curr = newHeap, *next = curr->sibling;
+
+    while (next) {
+        if ((curr->degree != next->degree) ||
+            (next->sibling && next->sibling->degree == curr->degree)) {
+            prev = curr;
+            curr = next;
+        } else {
+            if (curr->key <= next->key) {
+                curr->sibling = next->sibling;
+                curr = mergeTrees(curr, next);
+            } else {
+                if (prev == NULL)
+                    newHeap = next;
+                else
+                    prev->sibling = next;
+                curr = mergeTrees(next, curr);
+            }
+        }
+        next = curr->sibling;
+    }
+    return newHeap;
+}
+
+// Find minimum element
+int findMin(Node* heap) {
+    if (!heap) return -1;
+    int min = INT_MAX;
+    Node* curr = heap;
+    while (curr) {
+        if (curr->key < min)
+            min = curr->key;
+        curr = curr->sibling;
+    }
+    return min;
+}
+
+// Find maximum element
+int findMax(Node* heap) {
+    if (!heap) return -1;
+    int max = INT_MIN;
+    Node* curr = heap;
+    while (curr) {
+        if (curr->key > max)
+            max = curr->key;
+        curr = curr->sibling;
+    }
+    return max;
+}
+
+// Reverse a linked list of nodes
+Node* reverseList(Node* node) {
+    Node *prev = NULL, *curr = node, *next;
+    while (curr) {
+        curr->parent = NULL;
+        next = curr->sibling;
+        curr->sibling = prev;
+        prev = curr;
+        curr = next;
+    }
+    return prev;
+}
+
+// Extract minimum element
+Node* extractMin(Node* heap) {
+    if (!heap) return NULL;
+
+    Node *minNode = heap, *minPrev = NULL;
+    Node *curr = heap, *prev = NULL;
+    int min = heap->key;
+
+    // Find minimum root
+    while (curr) {
+        if (curr->key < min) {
+            min = curr->key;
+            minNode = curr;
+            minPrev = prev;
+        }
+        prev = curr;
+        curr = curr->sibling;
+    }
+
+    // Remove minNode from heap list
+    if (minPrev)
+        minPrev->sibling = minNode->sibling;
+    else
+        heap = minNode->sibling;
+
+    // Reverse minNode's child list
+    Node* childHeap = reverseList(minNode->child);
+
+    // Union the remaining heap with child heap
+    heap = unionHeaps(heap, childHeap);
+
+    printf("Deleted Min: %d\n", minNode->key);
+    free(minNode);
+    return heap;
+}
+
+// Display heap roots
+void display(Node* heap) {
+    Node* curr = heap;
+    printf("\nHeap roots: ");
+    while (curr) {
+        printf("%d(deg:%d) ", curr->key, curr->degree);
+        curr = curr->sibling;
+    }
+    printf("\n");
+}
+
+// Driver code
+int main() {
+    Node* heap = NULL;
+    int choice, val;
+
+    while (1) {
+        printf("\n--- Binomial Heap Menu ---\n");
+        printf("1. Insert\n");
+        printf("2. Find Min\n");
+        printf("3. Find Max\n");
+        printf("4. Delete Min\n");
+        printf("5. Display\n");
+        printf("6. Exit\n");
+        printf("Enter choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                printf("Enter value: ");
+                scanf("%d", &val);
+                heap = unionHeaps(heap, newNode(val));
+                printf("Inserted %d\n", val);
+                break;
+
+            case 2:
+                if (heap)
+                    printf("Min: %d\n", findMin(heap));
+                else
+                    printf("Heap is empty.\n");
+                break;
+
+            case 3:
+                if (heap)
+                    printf("Max: %d\n", findMax(heap));
+                else
+                    printf("Heap is empty.\n");
+                break;
+
+            case 4:
+                if (heap)
+                    heap = extractMin(heap);
+                else
+                    printf("Heap is empty.\n");
+                break;
+
+            case 5:
+                display(heap);
+                break;
+
+            case 6:
+                printf("Exiting...\n");
+                return 0;
+
+            default:
+                printf("Invalid choice.\n");
+        }
+    }
+}
+same for this
